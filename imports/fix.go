@@ -241,7 +241,7 @@ func loadPkg(wg *sync.WaitGroup, root, pkgrelpath string) {
 	for _, child := range children {
 		// Avoid .foo, _foo, and testdata directory trees.
 		name := child.Name()
-		if name == "" || name[0] == '.' || name[0] == '_' || name == "testdata" {
+		if name == "" || name[0] == '.' || (name[0] == '_' && name != "_workspace") || name == "testdata" {
 			continue
 		}
 		if strings.HasSuffix(name, ".go") {
@@ -353,16 +353,15 @@ func findImportGoPath(pkgName string, symbols map[string]bool) (string, bool, er
 		return "", false, nil
 	}
 
-	// If there are multiple candidate packages, the shortest one wins.
-	// This is a heuristic to prefer the standard library (e.g. "bytes")
-	// over e.g. "github.com/foo/bar/bytes".
-	shortest := ""
+	// If there are multiple candidate packages, the longest one wins.
+	// This is a heuristic to prefer vendored deps saved with godep save -r.
+	longest := ""
 	for importPath := range pkgs {
-		if shortest == "" || len(importPath) < len(shortest) {
-			shortest = importPath
+		if longest == "" || len(importPath) > len(longest) {
+			longest = importPath
 		}
 	}
-	return shortest, false, nil
+	return longest, false, nil
 }
 
 type visitFn func(node ast.Node) ast.Visitor
